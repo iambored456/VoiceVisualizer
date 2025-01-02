@@ -30,6 +30,9 @@
                 width: 660px;
                 height: 400px;
             }
+            #detune {
+                 display: none;
+            }   
         </style>
     </head>
     <body>
@@ -37,9 +40,6 @@
         
         <p><button onclick="startPitchDetect();">Start</button></p>
         <p>
-            <button onclick="toggleLiveInput()">use live input</button>
-            <!--<button onclick="updatePitch(0);">sample</button>-->
-        </p>
 
         <div id="detector" class="vague">
             <div class="pitch"><span id="pitch">--</span>Hz</div>
@@ -51,9 +51,9 @@
         <!-- Container for frequency plot and notes visualization -->
         <div id="plotContainer">
             <!-- Scrolling plot graph for frequency over time -->
-            <canvas id="frequencyPlot" width="2050" height="500" style="border:1px solid #d3d3d3;"></canvas>
+            <canvas id="frequencyPlot" width="1350" height="500" style="border:1px solid #d3d3d3;"></canvas>
             <!-- Canvas for notes visualization -->
-            <canvas id="noteCanvas" width="2050" height="500"></canvas>
+            <canvas id="noteCanvas" width="1350" height="500"></canvas>
         </div>
 
         <script type="text/javascript">
