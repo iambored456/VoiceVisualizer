@@ -20,10 +20,11 @@ var detectorElem,
 var plotCanvas = null;
 var plotCtx = null;
 var plotData = [];
-var plotWidth = 2000;      // Width of the plotting area
+var yAxisWidth = 100;      // Width reserved for the y-axis labels
+var plotStartX = yAxisWidth; // Starting position after the left y-axis
+var plotWidth = 1150;      // Width of the plotting area
 var plotHeight = 500;     // Height of the plotting area
 var plotMaxFreq = 700;    // Maximum frequency to display on the plot
-var yAxisWidth = 60;      // Width reserved for the y-axis labels
 
 // Variables for the notes visualization
 var noteCanvas = null;
@@ -114,43 +115,172 @@ function generateNotes(minFreq, maxFreq) {
 }
 
 // Function to draw the y-axis with note labels
+// Define pitch classes for each column
+const ColumnAPitchClasses = ["C", "D", "E", "F#", "G#", "A#"];
+const ColumnBPitchClasses = ["C#", "D#", "F", "G", "A", "B"];
+
+/**
+ * @param {Array} notes - Array of note objects within the frequency range.
+ * @param {number} logMin - Logarithm of the minimum frequency.
+ * @param {number} logMax - Logarithm of the maximum frequency.
+ * @param {number} plotHeight - Height of the plotting area in pixels.
+ */
+
 function drawYAxis(notes, logMin, logMax, plotHeight) {
     if (!plotCtx) return;
 
-    // Clear existing y-axis
-    plotCtx.clearRect(plotWidth, 0, yAxisWidth, plotHeight);
+    // Clear existing y-axis area (both left and right columns)
+    plotCtx.clearRect(0, 0, plotCanvas.width, plotCanvas.height);
 
-    // Set font for labels
-    plotCtx.font = "12px Arial";
-    plotCtx.fillStyle = "black";
-    plotCtx.textAlign = "left";
+    // Set font and styles for labels
+    plotCtx.font = "18px Arial";
+    plotCtx.fillStyle = "black"; // Default text color
     plotCtx.textBaseline = "middle";
 
-    notes.forEach(function(note) {
-        // Calculate the y position for the note
-        var logFreq = Math.log(note.freq);
-        var normalized = (logFreq - logMin) / (logMax - logMin);
-        var y = plotHeight - normalized * plotHeight;
+    // Initialize column positions for the right side
+    const rightLeftColumnX = yAxisWidth + plotWidth + 25; // Right-side left column (5px padding from plot edge)
+    const rightRightColumnX = yAxisWidth + plotWidth + 75; // Right-side right column
 
-        // Draw a horizontal line for reference (optional)
-        plotCtx.strokeStyle = "#e0e0e0";
-        plotCtx.beginPath();
-        plotCtx.moveTo(0, y);
-        plotCtx.lineTo(plotWidth, y);
-        plotCtx.stroke();
+    // Initialize column positions for the left side
+    const leftLeftColumnX = yAxisWidth - 25; // Left-side left column (adjust padding)
+    const leftRightColumnX = yAxisWidth - 75; // Left-side right column
 
-        // Draw the note label on the right side
-        plotCtx.fillStyle = "black";
-        plotCtx.fillText(note.label, plotWidth + 5, y); // 5 pixels padding from the plot edge
+    // Initialize previous Y position to the bottom of the plot
+    let prevY = plotHeight;
+
+        // Iterate through notes to draw horizontal lines and labels for both y-axes
+        notes.forEach(function(note) {
+            // Calculate y position of the note
+            var logFreq = Math.log(note.freq);
+            var normalized = (logFreq - logMin) / (logMax - logMin);
+            var y = plotHeight - normalized * plotHeight;
+
+            // Determine if the note belongs to ColumnA or ColumnB
+            let pitchClass = note.label.slice(0, -1); // Get pitch class (e.g., "C", "D#")
+            let isColumnA = ColumnAPitchClasses.includes(pitchClass);
+
+            // Draw horizontal lines for the left y-axis
+            plotCtx.beginPath();
+            if (isColumnA) {
+                // Draw from (0, y) to (yAxisWidth / 2, y)
+                plotCtx.moveTo(0, y);
+                plotCtx.lineTo(yAxisWidth / 2, y);
+            } else {
+                // Draw from (yAxisWidth / 2, y) to (yAxisWidth, y)
+                plotCtx.moveTo(yAxisWidth / 2, y);
+                plotCtx.lineTo(yAxisWidth, y);
+            }
+            plotCtx.strokeStyle = "black";
+            plotCtx.lineWidth = 1;
+            plotCtx.stroke();
+
+            // Draw horizontal lines for the right y-axis
+            plotCtx.beginPath();
+            if (isColumnA) {
+                // Draw from (yAxisWidth + plotWidth, y) to (yAxisWidth + plotWidth + yAxisWidth / 2, y)
+                plotCtx.moveTo(yAxisWidth + plotWidth + yAxisWidth / 2, y);
+                plotCtx.lineTo(yAxisWidth + plotWidth + yAxisWidth, y);
+            } else {
+                // Draw from (yAxisWidth + plotWidth + yAxisWidth / 2, y) to (yAxisWidth + plotWidth + yAxisWidth, y)
+                plotCtx.moveTo(yAxisWidth + plotWidth, y);
+                plotCtx.lineTo(yAxisWidth + plotWidth + yAxisWidth / 2, y);
+            }
+            plotCtx.strokeStyle = "black";
+            plotCtx.lineWidth = 1;
+            plotCtx.stroke();
+
+            // Draw vertical line for the left y-axis
+                plotCtx.moveTo(yAxisWidth/2, 0);
+                plotCtx.lineTo(yAxisWidth/2, plotHeight)
+            // Draw vertical line for the right y-axis
+            plotCtx.moveTo(yAxisWidth + plotWidth + yAxisWidth/2, 0);
+            plotCtx.lineTo(yAxisWidth + plotWidth + yAxisWidth/2, plotHeight)
+            plotCtx.strokeStyle = "black";
+            plotCtx.lineWidth = 1;
+            plotCtx.stroke();
+
+
+        // Determine grid line style based on pitch class
+        if (pitchClass === 'C') {
+            plotCtx.strokeStyle = "#FF0000"; // Red color for "C"
+            plotCtx.lineWidth = 2;
+            plotCtx.setLineDash([]); // Ensure solid line
+            plotCtx.beginPath();
+            plotCtx.moveTo(plotStartX, y);
+            plotCtx.lineTo(plotStartX + plotWidth, y);            
+            plotCtx.stroke();
+        } else if (pitchClass === 'E') {
+            plotCtx.strokeStyle = "#000000"; // Black for "E"
+            plotCtx.lineWidth = 1;
+            plotCtx.setLineDash([5, 5]); // Dashed line pattern
+            plotCtx.beginPath();
+            plotCtx.moveTo(plotStartX, y);
+            plotCtx.lineTo(plotStartX + plotWidth, y);            
+            plotCtx.stroke();
+
+            // Reset dashed line to solid after drawing
+            plotCtx.setLineDash([]);
+        } else if (['D', 'F#', 'G#', 'A#'].includes(pitchClass)) {
+            plotCtx.strokeStyle = "#000000"; // Solid black for D, F#, G#, A#
+            plotCtx.lineWidth = 1;
+            plotCtx.setLineDash([]); // Ensure solid line
+            plotCtx.beginPath();
+            plotCtx.moveTo(plotStartX, y);
+            plotCtx.lineTo(plotStartX + plotWidth, y);            
+            plotCtx.stroke();
+        }
+
+        // Handle "G" rows with a gray background
+        if (pitchClass === 'G') {
+            var rowHeight = prevY - y; // Calculate the height between this row and the previous
+            if (rowHeight > 0) {
+                plotCtx.fillStyle = "rgba(200, 200, 200, 0.5)"; // Light gray with 50% opacity
+                plotCtx.fillRect(plotStartX, y - rowHeight, plotWidth, rowHeight*2);
+            }
+
+            // Reset fill style to default after drawing
+            plotCtx.fillStyle = "black";
+        }
+
+        // Draw labels for the right-side y-axis
+        if (ColumnAPitchClasses.includes(pitchClass)) {
+            plotCtx.textAlign = "center";
+            plotCtx.textBaseline = "middle";
+            plotCtx.fillText(note.label, rightLeftColumnX, y);
+        } else if (ColumnBPitchClasses.includes(pitchClass)) {
+            plotCtx.textAlign = "center";
+            plotCtx.textBaseline = "middle";
+            plotCtx.fillText(note.label, rightRightColumnX, y);
+        }
+
+        // Draw labels for the left-side y-axis
+        if (ColumnAPitchClasses.includes(pitchClass)) {
+            plotCtx.textAlign = "center";
+            plotCtx.textBaseline = "middle";
+            plotCtx.fillText(note.label, leftLeftColumnX, y);
+        } else if (ColumnBPitchClasses.includes(pitchClass)) {
+            plotCtx.textAlign = "center";
+            plotCtx.textBaseline = "middle";
+            plotCtx.fillText(note.label, leftRightColumnX, y);
+        }
+
+        // Update prevY for the next iteration
+        prevY = y;
     });
 
-    // Optionally, draw the y-axis line
-    plotCtx.strokeStyle = "black";
+    // Left-side y-axis line
     plotCtx.beginPath();
-    plotCtx.moveTo(plotWidth, 0);
-    plotCtx.lineTo(plotWidth, plotHeight);
+    plotCtx.moveTo(yAxisWidth, 0);
+    plotCtx.lineTo(yAxisWidth, plotHeight);
+    plotCtx.stroke();
+
+    // Right-side y-axis line
+    plotCtx.beginPath();
+    plotCtx.moveTo(plotWidth + yAxisWidth, 0);
+    plotCtx.lineTo(plotWidth + yAxisWidth, plotHeight);
     plotCtx.stroke();
 }
+
 
 // Function to start pitch detection
 function startPitchDetect() {
@@ -298,7 +428,7 @@ function autoCorrelate(buf, sampleRate) {
 function scaleX(timeDifference) {
     // Map timeDifference to x coordinate
     // timeDifference should be within [0, timeWindow]
-    return (timeDifference / timeWindow) * plotWidth;
+    return plotStartX + (timeDifference / timeWindow) * plotWidth;
 }
 
 function scaleY(noteValue) {
@@ -346,66 +476,7 @@ function hslToRgb(h, s, l) {
     return [r, g, b];
 }
 
-// Function to draw notes as circles and connect nearby points
-function drawNotes() {
-    if (!noteCtx) return;
 
-    var w = noteCanvas.width;
-    var h = noteCanvas.height;
-
-    // Clear the canvas
-    noteCtx.clearRect(0, 0, w, h);
-
-    var currentTime = Date.now();
-
-    // Convert frequencies -> (x,y) for drawing
-    var notes = frequencies.map(function(freqData) {
-        var t = freqData.time;
-        var f = freqData.frequency;
-        var c = freqData.clarity;
-
-        // Convert frequency to MIDI note and cents offset
-        var note = noteFromPitch(f); // e.g., 48 for C4
-        var centsOff = centsOffFromPitch(f, note);
-
-        var x = scaleX(currentTime - t); // timeDifference should be positive
-        var y = scaleY(note + centsOff / 100);
-
-        var color = colorFromNote(note);
-        return { time: t, x: x, y: y, clarity: c, color: color };
-    });
-
-    // Draw lines between nearby points
-    noteCtx.strokeStyle = 'rgba(0,0,0,0.1)';
-    noteCtx.lineWidth = 1;
-    noteCtx.beginPath();
-
-    for (var i = 0; i < notes.length; i++) {
-        var connections = 0;
-        for (var j = i + 1; j < notes.length && connections < maxConnections; j++) {
-            var dx = notes[i].x - notes[j].x;
-            var dy = notes[i].y - notes[j].y;
-            var distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance <= proximityThreshold) {
-                noteCtx.moveTo(notes[i].x, notes[i].y);
-                noteCtx.lineTo(notes[j].x, notes[j].y);
-                connections++;
-            }
-        }
-    }
-
-    noteCtx.stroke();
-
-    // Draw circles for each note
-    notes.forEach(function(note) {
-        var opacity = Math.min(note.clarity * 0.5, 1);
-        noteCtx.fillStyle = `rgba(${note.color[0]}, ${note.color[1]}, ${note.color[2]}, ${opacity})`;
-        noteCtx.beginPath();
-        noteCtx.arc(note.x, note.y, 3, 0, Math.PI * 2);
-        noteCtx.fill();
-    });
-}
 
 // Function to handle pitch updates
 function updatePitch(time) {
@@ -514,7 +585,7 @@ function updatePlot(frequency) {
     }
 
     // Clear the plot canvas
-    plotCtx.clearRect(0, 0, plotWidth + yAxisWidth, plotHeight);
+    plotCtx.clearRect(plotStartX, 0, plotWidth, plotHeight);
 
     // Draw the y-axis with labels
     drawYAxis(notesInRange, logMin, logMax, plotHeight);
