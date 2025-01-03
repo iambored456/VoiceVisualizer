@@ -129,157 +129,138 @@ const ColumnBPitchClasses = ["C#", "D#", "F", "G", "A", "B"];
 function drawYAxis(notes, logMin, logMax, plotHeight) {
     if (!plotCtx) return;
 
-    // Clear existing y-axis area (both left and right columns)
+    // Clear existing y-axis area
     plotCtx.clearRect(0, 0, plotCanvas.width, plotCanvas.height);
 
     // Set font and styles for labels
     plotCtx.font = "18px Arial";
-    plotCtx.fillStyle = "black"; // Default text color
     plotCtx.textBaseline = "middle";
 
-    // Initialize column positions for the right side
-    const rightLeftColumnX = yAxisWidth + plotWidth + 25; // Right-side left column (5px padding from plot edge)
-    const rightRightColumnX = yAxisWidth + plotWidth + 75; // Right-side right column
+    // Column positions for labels
+    const rightLeftColumnX = yAxisWidth + plotWidth + 25;
+    const rightRightColumnX = yAxisWidth + plotWidth + 75;
+    const leftLeftColumnX = yAxisWidth - 25;
+    const leftRightColumnX = yAxisWidth - 75;
 
-    // Initialize column positions for the left side
-    const leftLeftColumnX = yAxisWidth - 25; // Left-side left column (adjust padding)
-    const leftRightColumnX = yAxisWidth - 75; // Left-side right column
+    // Label background colors
+    const labelBackgroundColors = {
+        "C": "#f090ae",
+        "D": "#ea9e5e",
+        "E": "#a8bd61",
+        "F": "#76c788",
+        "G": "#33c6dc",
+        "A": "#94adff",
+        "B": "#dd95d6"
+    };
 
-    // Initialize previous Y position to the bottom of the plot
+    // Initialize previous Y position to handle gray background rows
     let prevY = plotHeight;
 
-        // Iterate through notes to draw horizontal lines and labels for both y-axes
-        notes.forEach(function(note) {
-            // Calculate y position of the note
-            var logFreq = Math.log(note.freq);
-            var normalized = (logFreq - logMin) / (logMax - logMin);
-            var y = plotHeight - normalized * plotHeight;
 
-            // Determine if the note belongs to ColumnA or ColumnB
-            let pitchClass = note.label.slice(0, -1); // Get pitch class (e.g., "C", "D#")
-            let isColumnA = ColumnAPitchClasses.includes(pitchClass);
+    // Iterate through notes to draw labels and grid lines
+    notes.forEach(function (note) {
+        const logFreq = Math.log(note.freq);
+        const normalized = (logFreq - logMin) / (logMax - logMin);
+        const y = plotHeight - normalized * plotHeight;
 
-            // Draw horizontal lines for the left y-axis
-            plotCtx.beginPath();
-            if (isColumnA) {
-                // Draw from (0, y) to (yAxisWidth / 2, y)
-                plotCtx.moveTo(0, y);
-                plotCtx.lineTo(yAxisWidth / 2, y);
-            } else {
-                // Draw from (yAxisWidth / 2, y) to (yAxisWidth, y)
-                plotCtx.moveTo(yAxisWidth / 2, y);
-                plotCtx.lineTo(yAxisWidth, y);
+        const pitchClass = note.label.slice(0, -1); // Extract pitch class
+        const isColumnA = ColumnAPitchClasses.includes(pitchClass);
+
+        
+        // Draw horizontal lines (left y-axis)
+        plotCtx.beginPath();
+        if (isColumnA) {
+            plotCtx.moveTo(0, y);
+            plotCtx.lineTo(yAxisWidth / 2, y);
+        } else {
+            plotCtx.moveTo(yAxisWidth / 2, y);
+            plotCtx.lineTo(yAxisWidth, y);
+        }
+        plotCtx.strokeStyle = "black";
+        plotCtx.lineWidth = 1;
+        plotCtx.stroke();
+        // Draw horizontal lines (right y-axis)
+        plotCtx.beginPath();
+        if (isColumnA) {
+            plotCtx.moveTo(yAxisWidth + plotWidth + yAxisWidth / 2, y);
+            plotCtx.lineTo(yAxisWidth + plotWidth + yAxisWidth, y);
+        } else {
+            plotCtx.moveTo(yAxisWidth + plotWidth, y);
+            plotCtx.lineTo(yAxisWidth + plotWidth + yAxisWidth / 2, y);
+        }
+        plotCtx.strokeStyle = "black";
+        plotCtx.lineWidth = 1;
+        plotCtx.stroke();
+
+
+        // Draw label backgrounds and text for left and right y-axis
+        const drawLabel = (x, y) => {
+            if (labelBackgroundColors[pitchClass]) {
+                plotCtx.fillStyle = labelBackgroundColors[pitchClass];
+                plotCtx.fillRect(x - 25, y - 13, 50, 26);
             }
-            plotCtx.strokeStyle = "black";
-            plotCtx.lineWidth = 1;
-            plotCtx.stroke();
+            plotCtx.fillStyle = "black"; // Reset text color
+            plotCtx.textAlign = "center";
+            plotCtx.fillText(note.label, x, y);
+        };
 
-            // Draw horizontal lines for the right y-axis
-            plotCtx.beginPath();
-            if (isColumnA) {
-                // Draw from (yAxisWidth + plotWidth, y) to (yAxisWidth + plotWidth + yAxisWidth / 2, y)
-                plotCtx.moveTo(yAxisWidth + plotWidth + yAxisWidth / 2, y);
-                plotCtx.lineTo(yAxisWidth + plotWidth + yAxisWidth, y);
-            } else {
-                // Draw from (yAxisWidth + plotWidth + yAxisWidth / 2, y) to (yAxisWidth + plotWidth + yAxisWidth, y)
-                plotCtx.moveTo(yAxisWidth + plotWidth, y);
-                plotCtx.lineTo(yAxisWidth + plotWidth + yAxisWidth / 2, y);
+        // Draw left-side labels
+        drawLabel(isColumnA ? leftLeftColumnX : leftRightColumnX, y);
+
+        // Draw right-side labels
+        drawLabel(isColumnA ? rightLeftColumnX : rightRightColumnX, y);
+       
+        // Handle "G" rows with a gray background
+        if (pitchClass === "G") {
+            const rowHeight = prevY - y; // Calculate row height
+            if (rowHeight > 0) {
+                plotCtx.fillStyle = "rgba(200, 200, 200, 0.5)"; // Light gray
+                plotCtx.fillRect(plotStartX, y - 13, plotWidth, 26);
             }
-            plotCtx.strokeStyle = "black";
-            plotCtx.lineWidth = 1;
-            plotCtx.stroke();
-
-            // Draw vertical line for the left y-axis
-                plotCtx.moveTo(yAxisWidth/2, 0);
-                plotCtx.lineTo(yAxisWidth/2, plotHeight)
-            // Draw vertical line for the right y-axis
-            plotCtx.moveTo(yAxisWidth + plotWidth + yAxisWidth/2, 0);
-            plotCtx.lineTo(yAxisWidth + plotWidth + yAxisWidth/2, plotHeight)
-            plotCtx.strokeStyle = "black";
-            plotCtx.lineWidth = 1;
-            plotCtx.stroke();
-
-
-        // Determine grid line style based on pitch class
-        if (pitchClass === 'C') {
-            plotCtx.strokeStyle = "#FF0000"; // Red color for "C"
+        }
+       
+        // Skip drawing lines for accidentals
+        if (["C#", "D#", "F", "G", "A", "B"].includes(pitchClass)) {
+            return; // Skip this iteration
+        }
+        // Handle grid lines and specific logic
+        if (pitchClass === "C") {
+            plotCtx.strokeStyle = "#FF0000"; // Red for C
             plotCtx.lineWidth = 2;
-            plotCtx.setLineDash([]); // Ensure solid line
-            plotCtx.beginPath();
-            plotCtx.moveTo(plotStartX, y);
-            plotCtx.lineTo(plotStartX + plotWidth, y);            
-            plotCtx.stroke();
-        } else if (pitchClass === 'E') {
-            plotCtx.strokeStyle = "#000000"; // Black for "E"
+        } else if (pitchClass === "E") {
+            plotCtx.strokeStyle = "#000000"; // Black dashed for E
             plotCtx.lineWidth = 1;
-            plotCtx.setLineDash([5, 5]); // Dashed line pattern
-            plotCtx.beginPath();
-            plotCtx.moveTo(plotStartX, y);
-            plotCtx.lineTo(plotStartX + plotWidth, y);            
-            plotCtx.stroke();
-
-            // Reset dashed line to solid after drawing
-            plotCtx.setLineDash([]);
-        } else if (['D', 'F#', 'G#', 'A#'].includes(pitchClass)) {
+            plotCtx.setLineDash([5, 5]);
+        } else if (["D", "F#", "G#", "A#"].includes(pitchClass)) {
             plotCtx.strokeStyle = "#000000"; // Solid black for D, F#, G#, A#
             plotCtx.lineWidth = 1;
             plotCtx.setLineDash([]); // Ensure solid line
-            plotCtx.beginPath();
-            plotCtx.moveTo(plotStartX, y);
-            plotCtx.lineTo(plotStartX + plotWidth, y);            
-            plotCtx.stroke();
         }
 
-        // Handle "G" rows with a gray background
-        if (pitchClass === 'G') {
-            var rowHeight = prevY - y; // Calculate the height between this row and the previous
-            if (rowHeight > 0) {
-                plotCtx.fillStyle = "rgba(200, 200, 200, 0.5)"; // Light gray with 50% opacity
-                plotCtx.fillRect(plotStartX, y - rowHeight, plotWidth, rowHeight*2);
-            }
+        // Draw the actual grid line
+        plotCtx.beginPath();
+        plotCtx.moveTo(plotStartX, y);
+        plotCtx.lineTo(plotStartX + plotWidth, y);
+        plotCtx.stroke();
 
-            // Reset fill style to default after drawing
-            plotCtx.fillStyle = "black";
-        }
 
-        // Draw labels for the right-side y-axis
-        if (ColumnAPitchClasses.includes(pitchClass)) {
-            plotCtx.textAlign = "center";
-            plotCtx.textBaseline = "middle";
-            plotCtx.fillText(note.label, rightLeftColumnX, y);
-        } else if (ColumnBPitchClasses.includes(pitchClass)) {
-            plotCtx.textAlign = "center";
-            plotCtx.textBaseline = "middle";
-            plotCtx.fillText(note.label, rightRightColumnX, y);
-        }
 
-        // Draw labels for the left-side y-axis
-        if (ColumnAPitchClasses.includes(pitchClass)) {
-            plotCtx.textAlign = "center";
-            plotCtx.textBaseline = "middle";
-            plotCtx.fillText(note.label, leftLeftColumnX, y);
-        } else if (ColumnBPitchClasses.includes(pitchClass)) {
-            plotCtx.textAlign = "center";
-            plotCtx.textBaseline = "middle";
-            plotCtx.fillText(note.label, leftRightColumnX, y);
-        }
-
-        // Update prevY for the next iteration
-        prevY = y;
+        // Reset dash style after drawing
+        plotCtx.setLineDash([]);
     });
 
-    // Left-side y-axis line
+    // Draw vertical y-axis lines
     plotCtx.beginPath();
     plotCtx.moveTo(yAxisWidth, 0);
     plotCtx.lineTo(yAxisWidth, plotHeight);
     plotCtx.stroke();
 
-    // Right-side y-axis line
     plotCtx.beginPath();
     plotCtx.moveTo(plotWidth + yAxisWidth, 0);
     plotCtx.lineTo(plotWidth + yAxisWidth, plotHeight);
     plotCtx.stroke();
 }
+
 
 
 // Function to start pitch detection
@@ -426,9 +407,9 @@ function autoCorrelate(buf, sampleRate) {
 
 // Scaling functions
 function scaleX(timeDifference) {
-    // Map timeDifference to x coordinate
+    // Map timeDifference to x coordinate, scrolling from right to left
     // timeDifference should be within [0, timeWindow]
-    return plotStartX + (timeDifference / timeWindow) * plotWidth;
+    return plotStartX + plotWidth - (timeDifference / timeWindow) * plotWidth;
 }
 
 function scaleY(noteValue) {
@@ -440,40 +421,47 @@ function scaleY(noteValue) {
     return plotHeight - normalized * plotHeight;
 }
 
-// Function to assign color based on MIDI note number
-function colorFromNote(note) {
-    // Assign a color based on the MIDI note number
-    // Cycle through hues based on note modulo 12
-    var hue = (note % 12) * 30; // 12 semitones, 360 degrees
-    var saturation = 100; // in percentage
-    var lightness = 50; // in percentage
+// Custom palette for 12 notes
+const noteColors = {
+    0: "#f090ae",  // C
+    1: "#f59383",  // C#/Db
+    2: "#ea9e5e",  // D
+    3: "#d0ae4e",  // D#/Eb
+    4: "#a8bd61",  // E
+    5: "#76c788",  // F
+    6: "#41cbb5",  // F#/Gb
+    7: "#33c6dc",  // G
+    8: "#62bbf7",  // G#/Ab
+    9: "#94adff",  // A
+    10: "#bea0f3", // A#/Bb
+    11: "#dd95d6"  // B
+};
 
-    // Convert HSL to RGB
-    return hslToRgb(hue, saturation, lightness);
+// Convert hex to RGB
+function hexToRgb(hex) {
+    let bigint = parseInt(hex.slice(1), 16);
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255];
 }
 
-// Helper function to convert HSL to RGB
-function hslToRgb(h, s, l) {
-    s /= 100;
-    l /= 100;
+// Interpolate between two RGB colors
+function interpolateRgb(color1, color2, factor) {
+    return color1.map((c, i) => Math.round(c + factor * (color2[i] - c)));
+}
 
-    var c = (1 - Math.abs(2 * l - 1)) * s,
-        x = c * (1 - Math.abs((h / 60) % 2 - 1)),
-        m = l - c / 2,
-        r = 0, g = 0, b = 0;
+// Get color for a MIDI note, interpolating between base colors
+function colorFromNoteCustom(note) {
+    let baseNote = Math.floor(note % 12);
+    let nextNote = (baseNote + 1) % 12;
 
-    if (0 <= h && h < 60) { r = c; g = x; b = 0; }
-    else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
-    else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
-    else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
-    else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
-    else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
+    // Convert colors to RGB
+    let baseColor = hexToRgb(noteColors[baseNote]);
+    let nextColor = hexToRgb(noteColors[nextNote]);
 
-    r = Math.round((r + m) * 255);
-    g = Math.round((g + m) * 255);
-    b = Math.round((b + m) * 255);
+    // Interpolation factor for fractional note values
+    let factor = note % 1;
 
-    return [r, g, b];
+    // Interpolate and return as RGB array
+    return interpolateRgb(baseColor, nextColor, factor);
 }
 
 
@@ -616,10 +604,11 @@ function drawNotes() {
         var note = noteFromPitch(f); // e.g., 48 for C4
         var centsOff = centsOffFromPitch(f, note);
 
-        var x = scaleX(currentTime - t); // timeDifference should be positive
+        // Reverse the x-coordinate to scroll from right to left
+        var x = plotStartX + plotWidth - (currentTime - t) / timeWindow * plotWidth;
         var y = scaleY(note + centsOff / 100);
 
-        var color = colorFromNote(note);
+        var color = colorFromNoteCustom(note);
         return { time: t, x: x, y: y, clarity: c, color: color };
     });
 
